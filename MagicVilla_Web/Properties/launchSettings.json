@@ -1,0 +1,38 @@
+﻿{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+    "profiles": {
+        "http": {
+            "commandName": "Project",
+            "dotnetRunMessages": true,
+            "launchBrowser": true,
+            "applicationUrl": "http://localhost:5066",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "HTTP_PROXY": "",
+                "HTTPS_PROXY": ""
+            }
+        },
+        "https": {
+            "commandName": "Project",
+            "dotnetRunMessages": true,
+            "launchBrowser": true,
+            "applicationUrl": "https://localhost:7202;http://localhost:5066",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "HTTP_PROXY": "",
+                "HTTPS_PROXY": ""
+            }
+        },
+        "MagicVilla_Web": {
+            "commandName": "Project",
+            "dontnetRunMessages": true,
+            "launchBrowser": true,
+            "launchUrl": "swagger",
+            "applicationUrl": "https://localhost:7202;http://localhost:5066",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "HTTP_PROXY": "",
+                "HTTPS_PROXY": ""
+            }
+        }
+    }
