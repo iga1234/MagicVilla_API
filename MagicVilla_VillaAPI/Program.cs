@@ -59,15 +59,16 @@ builder.Services.AddAuthentication(x =>
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)),
                 ValidateIssuer = false,
-                ValidateAudience = false
+                ValidateAudience = false,
+                ClockSkew = TimeSpan.Zero,
         };
 });
 builder.Services.AddControllers(option => {
-    option.CacheProfiles.Add("Default30",
-        new Microsoft.AspNetCore.Mvc.CacheProfile()
-        {
-            Duration = 30
-        });
+    //option.CacheProfiles.Add("Default30",
+        //new Microsoft.AspNetCore.Mvc.CacheProfile()
+        //{
+        //    Duration = 30
+        //});
     //option.ReturnHttpNotAcceptable = true;
 }).AddNewtonsoftJson().AddXmlDataContractSerializerFormatters();
 builder.Services.AddEndpointsApiExplorer();
@@ -145,12 +146,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Magic_VillaV1");
         options.SwaggerEndpoint("/swagger/v2/swagger.json", "Magic_VillaV2");
-
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Magic_VillaV1");
     });
 }
 
+app.UseStaticFiles();
 app.UseHttpsRedirection();
 
 app.UseAuthorization();

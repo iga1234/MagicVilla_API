@@ -4,6 +4,7 @@ using MagicVilla_VillaAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MagicVilla_VillaAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250509141027_UpdateUrlImages")]
+    partial class UpdateUrlImages
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -91,37 +94,6 @@ namespace MagicVilla_VillaAPI.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("MagicVilla_VillaAPI.Models.RefreshToken", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsValid")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("JwtTokenId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Refresh_Token")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("RefreshTokens");
-                });
-
             modelBuilder.Entity("MagicVilla_VillaAPI.Models.Villa", b =>
                 {
                     b.Property<int>("Id")
@@ -141,10 +113,8 @@ namespace MagicVilla_VillaAPI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ImageLocalPath")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("ImageUrl")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
@@ -213,7 +183,7 @@ namespace MagicVilla_VillaAPI.Migrations
                             Amenity = "",
                             CreateDate = new DateTime(2025, 2, 20, 10, 25, 44, 105, DateTimeKind.Local).AddTicks(6529),
                             Details = "Situated in Poissy, a small commune outside of Paris, Villa Savoye is one of the most significant contributions to modern architecture in the 20th century. Completed in 1929, Le Corbusier's masterpiece is a modern take on a French country house that celebrates and reacts to the new machine age.",
-                            ImageUrl = "https://placehold.co/600x404",
+                            ImageUrl = "https://https://placehold.co/600x404",
                             Name = "Premium Poll Villa",
                             Occupancy = 7,
                             Rate = 400.0,
@@ -226,7 +196,7 @@ namespace MagicVilla_VillaAPI.Migrations
                             Amenity = "",
                             CreateDate = new DateTime(2025, 2, 20, 10, 25, 44, 105, DateTimeKind.Local).AddTicks(6532),
                             Details = "Situated in Poissy, a small commune outside of Paris, Villa Savoye is one of the most significant contributions to modern architecture in the 20th century. Completed in 1929, Le Corbusier's masterpiece is a modern take on a French country house that celebrates and reacts to the new machine age.",
-                            ImageUrl = "https://placehold.co/600x405",
+                            ImageUrl = "https://https://placehold.co/600x405",
                             Name = "Luxury Pool Villa",
                             Occupancy = 5,
                             Rate = 300.0,
