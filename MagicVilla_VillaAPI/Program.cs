@@ -13,6 +13,15 @@ using System.Text;
 using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Identity;
 using MagicVilla_VillaAPI.Models;
+using Microsoft.Extensions.Options;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using MagicVilla_VillaAPI.Filters;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Diagnostics;
+using Newtonsoft.Json;
+using System.Diagnostics;
+using MagicVilla_VillaAPI.Extension;
+using MagicVilla_VillaAPI.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,84 +67,32 @@ builder.Services.AddAuthentication(x =>
             {
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)),
-                ValidateIssuer = false,
-                ValidateAudience = false,
+                ValidateIssuer = true,
+                //ValidIssuer = "https://magicVilla-api.com",
+                //ValidAudience = "test-villa-api.com",
+                ValidateAudience = true,
                 ClockSkew = TimeSpan.Zero,
         };
 });
 builder.Services.AddControllers(option => {
     //option.CacheProfiles.Add("Default30",
-        //new Microsoft.AspNetCore.Mvc.CacheProfile()
-        //{
-        //    Duration = 30
-        //});
+    //new Microsoft.AspNetCore.Mvc.CacheProfile()
+    //{
+    //    Duration = 30
+    //});
     //option.ReturnHttpNotAcceptable = true;
-}).AddNewtonsoftJson().AddXmlDataContractSerializerFormatters();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
+    option.Filters.Add<CustomExceptionFilter>();
+}).AddNewtonsoftJson().AddXmlDataContractSerializerFormatters().ConfigureApiBehaviorOptions(option =>
 {
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    option.ClientErrorMapping[StatusCodes.Status500InternalServerError] = new ClientErrorData
     {
-        Description =
-            "JWT Authorization header using the Bearer scheme. \r\n\r\n " +
-            "Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\n" +
-            "Example: \"Bearer 12345abcdef\"",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Scheme = "Bearer"
-    });
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement()
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                },
-                Scheme = "oauth2",
-                Name = "Bearer",
-                In = ParameterLocation.Header
-            },
-            new List<string>()
-        }
-    });
-    options.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Version = "v1.0",
-        Title = "Magic Villa v1",
-        Description = "API to manage Villa",
-        TermsOfService = new Uri("https://example.com/terms"),
-        Contact = new OpenApiContact
-        {
-            Name = "Iga",
-            Url = new Uri("https://example.com/contact")
-        },
-        License = new OpenApiLicense
-        {
-            Name = "Example License",
-            Url = new Uri("https://example.com/license")
-        }
-    });
-    options.SwaggerDoc("v2", new OpenApiInfo
-    {
-        Version = "v2.0",
-        Title = "Magic Villa v2",
-        Description = "API to manage Villa",
-        TermsOfService = new Uri("https://example.com/terms"),
-        Contact = new OpenApiContact
-        {
-            Name = "Iga",
-            Url = new Uri("https://example.com/contact")
-        },
-        License = new OpenApiLicense
-        {
-            Name = "Example License",
-            Url = new Uri("https://example.com/license")
-        }
-    });
+        Link = "httpe://fakeapi.com/500"
+    };
 });
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
+builder.Services.AddSwaggerGen();
 //builder.Services.AddSingleton<ILogging, LoggingV2>();
 
 var app = builder.Build();
@@ -150,12 +107,39 @@ if (app.Environment.IsDevelopment())
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "Magic_VillaV1");
     });
 }
+else
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v2/swagger.json", "Magic_VillaV2");
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Magic_VillaV1");
+        options.RoutePrefix = "";
+    });
+}
 
+//app.UseExceptionHandler("/ErrorHandling/ProcessError");
+
+//app.HandelError(app.Environment.IsDevelopment());
+app.UseMiddleware<CustomExceptionMiddleware>();
 app.UseStaticFiles();
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
 app.MapControllers();
-
+ApplyMigration();
 app.Run();
+
+void ApplyMigration()
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var _db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        if (_db.Database.GetPendingMigrations().Count() > 0 )
+        {
+            _db.Database.Migrate();
+        }
+    }
+}

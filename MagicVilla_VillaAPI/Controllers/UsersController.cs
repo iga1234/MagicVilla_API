@@ -20,6 +20,18 @@ namespace MagicVilla_VillaAPI.Controllers
             this._response = new();
         }
 
+        [HttpGet("error")]
+        public async Task<IActionResult> Error()
+        {
+            throw new FileNotFoundException();
+        }
+
+        [HttpGet("imageError")]
+        public async Task<IActionResult> ImageError()
+        {
+            throw new BadImageFormatException("Fake Image Exception");
+        }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDTO model)
         {
@@ -88,6 +100,22 @@ namespace MagicVilla_VillaAPI.Controllers
                 return BadRequest(_response);
             }
                
+        }
+
+        [HttpPost("revoke")]
+        public async Task<IActionResult> RevokeRefreshToken([FromBody] TokenDTO tokenDTO)
+        {
+            if (ModelState.IsValid)
+            {
+                await _userRepo.RevokeRefreshToken(tokenDTO);
+                _response.StatusCode = HttpStatusCode.OK;
+                _response.IsSuccess = true;
+                return Ok(_response);
+            }
+
+            _response.IsSuccess = false;
+            _response.Result = "Invalid input";
+            return BadRequest(_response);
         }
     }
 }

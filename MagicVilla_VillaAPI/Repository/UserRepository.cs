@@ -107,9 +107,12 @@ namespace MagicVilla_VillaAPI.Repository
                     new Claim(ClaimTypes.Name, user.UserName.ToString()),
                     new Claim(ClaimTypes.Role, roles.FirstOrDefault()),
                     new Claim(JwtRegisteredClaimNames.Jti, jwtTokenId),
-                    new Claim(JwtRegisteredClaimNames.Sub, user.Id)
+                    new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+                    //new Claim(JwtRegisteredClaimNames.Aud, "test-villa-api.com")
                 }),
                 Expires = DateTime.UtcNow.AddMinutes(1),
+                //Issuer = "https://magicVilla-api.com",
+                //Audience = "https://test-magic-api.com",
                 SigningCredentials = new(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
 
@@ -129,27 +132,23 @@ namespace MagicVilla_VillaAPI.Repository
             }
 
             // Compare data from existing refresh and access token provided and if there is any missmatch then consider it as a fraud
-            var accessTokenData = GetAccessTokenData(tokenDTO.AccessToken);
-            if (!accessTokenData.isSuccessful || accessTokenData.userId != existingRefreshToken.UserId || accessTokenData.tokenId != existingRefreshToken.JwtTokenId)
+            var isTokenValid = GetAccessTokenData(tokenDTO.AccessToken, existingRefreshToken.UserId, existingRefreshToken.JwtTokenId);
+            if (!isTokenValid)
             {
-                existingRefreshToken.IsValid = false;
-                _db.SaveChanges();
+                await MarkTokenAsInvalid(existingRefreshToken);
                 return new TokenDTO();
             }
 
             //When someone tries to use not valid refresh token, fraud possible
             if (!existingRefreshToken.IsValid)
             {
-                var chainRecords = await _db.RefreshTokens.Where(u => u.UserId == existingRefreshToken.UserId
-                && u.JwtTokenId == existingRefreshToken.JwtTokenId).ExecuteUpdateAsync(u => u.SetProperty(refreshToken => refreshToken.IsValid, false));
-                return new TokenDTO();
+                await MarkAllTokenInChainAsInvalid(existingRefreshToken.UserId, existingRefreshToken.JwtTokenId);
             }
 
             //If just epired then mark as invalid and return empty
             if (existingRefreshToken.ExpiresAt < DateTime.UtcNow) 
             {
-                existingRefreshToken.IsValid = false;
-                _db.SaveChanges();
+                await MarkTokenAsInvalid(existingRefreshToken);
                 return new TokenDTO();
             }
 
@@ -157,8 +156,7 @@ namespace MagicVilla_VillaAPI.Repository
             var newRefreshToken = await CreateNewRefreshTokenAsync(existingRefreshToken.UserId, existingRefreshToken.JwtTokenId);
 
             // revoke existing token
-            existingRefreshToken.IsValid = false;
-            _db.SaveChanges();
+            await MarkTokenAsInvalid(existingRefreshToken);
 
             // generate new access token
             var applicationUser = _db.ApplicationUsers.FirstOrDefault(u => u.Id == existingRefreshToken.UserId);
@@ -174,6 +172,24 @@ namespace MagicVilla_VillaAPI.Repository
             };
         }
 
+        public async Task RevokeRefreshToken(TokenDTO tokenDTO)
+        {
+            var existingRefreshToken = await _db.RefreshTokens.FirstOrDefaultAsync(_ => _.Refresh_Token == tokenDTO.RefreshToken);
+
+            if (existingRefreshToken == null)
+                return;
+
+            // Compare data from existing refresh and access token provided and if there is any mismatch then we should do nothing with refresh token
+
+            var isTokenValid = GetAccessTokenData(tokenDTO.AccessToken, existingRefreshToken.UserId, existingRefreshToken.JwtTokenId);
+            if (!isTokenValid)
+            {
+                return;
+            }
+
+            await MarkAllTokenInChainAsInvalid(existingRefreshToken.UserId, existingRefreshToken.JwtTokenId);
+        }
+
         private async Task<string> CreateNewRefreshTokenAsync(string userId, string tokenId)
         {
             RefreshToken refreshToken = new()
@@ -181,7 +197,7 @@ namespace MagicVilla_VillaAPI.Repository
                 IsValid = true,
                 UserId = userId,
                 JwtTokenId = tokenId,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+                ExpiresAt = DateTime.UtcNow.AddMinutes(2),
                 Refresh_Token = Guid.NewGuid() + "-" + Guid.NewGuid(),
             };
             await _db.RefreshTokens.AddAsync(refreshToken);
@@ -189,20 +205,33 @@ namespace MagicVilla_VillaAPI.Repository
             return refreshToken.Refresh_Token;
         }
 
-        private (bool isSuccessful, string userId, string tokenId) GetAccessTokenData(string accessToken) 
-        { 
+        private bool GetAccessTokenData(string accessToken, string expectedUserId, string expectedTokenId) 
+        {
             try
             {
                 var tokenHandler = new JwtSecurityTokenHandler();
                 var jwt = tokenHandler.ReadJwtToken(accessToken);
                 var jwtTokenId = jwt.Claims.FirstOrDefault(u => u.Type == JwtRegisteredClaimNames.Jti).Value;
                 var userId = jwt.Claims.FirstOrDefault(u => u.Type == JwtRegisteredClaimNames.Sub).Value;
-                return (true, userId, jwtTokenId);
+                return userId == expectedUserId && jwtTokenId == expectedTokenId;
             }
             catch
             {
-                return (false, null, null);
+                return false;
             }
         }
+        private async Task MarkAllTokenInChainAsInvalid(string userId, string tokenId)
+        { 
+            await _db.RefreshTokens.Where(u => u.UserId == userId
+                && u.JwtTokenId == tokenId).ExecuteUpdateAsync(u => u.SetProperty(refreshToken => refreshToken.IsValid, false));
+        }
+
+        private Task MarkTokenAsInvalid(RefreshToken refreshToken)
+        {
+            refreshToken.IsValid = false;
+            return _db.SaveChangesAsync();
+        }
+
+       
     }
 }
